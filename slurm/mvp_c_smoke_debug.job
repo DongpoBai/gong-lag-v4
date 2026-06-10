@@ -1,0 +1,50 @@
+#!/bin/bash
+#SBATCH --job-name=mvp_c_smoke_debug
+#SBATCH --account=erhodes_44
+#SBATCH --partition=debug
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
+#SBATCH --time=1:00:00
+#SBATCH --output=/scratch1/dongpoba/gong_lag_v4/mvp_c_hmi_degradation/logs/slurm/mvp_c_smoke_debug_%j.out
+
+set -euo pipefail
+
+export OPENBLAS_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+cd /scratch1/dongpoba/gong_lag_v4_git_backup
+
+: "${HMI_BIN_TIMESERIES:?Set HMI_BIN_TIMESERIES=/exact/path/to/hmi_bin_timeseries.csv_or_parquet}"
+GONG_RUN="${GONG_RUN:-/scratch1/dongpoba/gong_lag_v4/q1_splitting_validation/runs/q1_prod_hmi2010_split_auto_all}"
+OUTROOT="/scratch1/dongpoba/gong_lag_v4/mvp_c_hmi_degradation"
+OUTDIR="${OUTROOT}/smoke_debug_${SLURM_JOB_ID}"
+
+python3 gong_lag_v4_mvp_c_hmi_degradation_injection.py \
+  --hmi-bin-timeseries="${HMI_BIN_TIMESERIES}" \
+  --hmi-format=extended_bins_12 \
+  --gong-run="${GONG_RUN}" \
+  --outdir="${OUTDIR}" \
+  --freq-min=2000 \
+  --freq-max=4500 \
+  --bin-widths=250,500 \
+  --focus-bin-low=3000 \
+  --focus-bin-high=3500 \
+  --degradation-kernel-days=9 \
+  --target-stride-days=3 \
+  --detrend-days=81 \
+  --inject-lags-hours=0,6,12 \
+  --n-injection-realizations=1 \
+  --noise-model=none \
+  --covariance-scale=1.0 \
+  --lag-search-hours=-72,72 \
+  --lag-step-hours=72 \
+  --bootstrap-n=0 \
+  --bootstrap-block-days=108 \
+  --random-seed=20260610 \
+  --audit-only \
+  --overwrite \
+  --log-level=INFO

@@ -1,0 +1,18 @@
+Accepted science-path fix for gong_lag_v4_mvp_ab.py.
+
+Acceptance evidence:
+- Full run directory: /scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all
+- audit.csv rows: 1555
+- window_index.csv rows: 15550
+- task_errors.csv rows: 0
+- checkpoints: 1555
+- all checkpoints status=done and n_task_errors=0
+- audit.shape_ok all true
+- audit.window_binary all true
+- audit/window_index quality_flags all empty
+- final assertion: FULL-RUN SCIENCE PATH CHECK PASSED
+
+Scope:
+- Fixed science path runtime failure only.
+- No HMI degradation, lag analysis, leakage model, Nigam-Kosovichev estimator, or temporal-window convolution added.
+- Run used --splitting-file none and --shift-sign none, so missing_splitting flags are expected diagnostics.

@@ -1,0 +1,78 @@
+{
+  "acceptance": "FULL-RUN SCIENCE PATH CHECK PASSED",
+  "checkpoints": 1555,
+  "run": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all",
+  "scope": {
+    "fixed_science_path_runtime_failure_only": true,
+    "hmi_degradation_implemented": false,
+    "lag_analysis_implemented": false,
+    "leakage_model_implemented": false,
+    "nigam_kosovichev_estimator_implemented": false,
+    "shift_sign": "none",
+    "splitting_file": "none",
+    "temporal_window_convolution_implemented": false
+  },
+  "tables": {
+    "audit": {
+      "path": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all/tables/audit.csv",
+      "quality_flags_counts": {
+        "nan": 1555
+      },
+      "shape": [
+        1555,
+        31
+      ]
+    },
+    "bin_time_series": {
+      "path": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all/tables/bin_time_series.csv",
+      "quality_flags_counts": {
+        "fisher_ill_conditioned;missing_splitting": 1861,
+        "missing_splitting": 54119,
+        "no_modes_in_bin": 3110
+      },
+      "shape": [
+        59090,
+        27
+      ]
+    },
+    "mode_diagnostics": {
+      "path": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all/tables/mode_diagnostics.csv",
+      "quality_flags_counts": {
+        "fisher_ill_conditioned;missing_splitting": 2012,
+        "missing_splitting": 408508
+      },
+      "shape": [
+        410520,
+        39
+      ]
+    },
+    "stack_diagnostics": {
+      "path": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all/tables/stack_diagnostics.csv",
+      "quality_flags_counts": {
+        "missing_splitting": 15550
+      },
+      "shape": [
+        15550,
+        16
+      ]
+    },
+    "task_errors": {
+      "path": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all/tables/task_errors.csv",
+      "quality_flags_counts": {},
+      "shape": [
+        0,
+        13
+      ]
+    },
+    "window_index": {
+      "path": "/scratch1/dongpoba/gong_lag_v4/runs/mvp_ab_fixed_science_nosplit_all/tables/window_index.csv",
+      "quality_flags_counts": {
+        "nan": 15550
+      },
+      "shape": [
+        15550,
+        20
+      ]
+    }
+  }
+}

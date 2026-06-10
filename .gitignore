@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local env / secrets
+.env
+.env.*
+*.pem
+*.key
+*_token*
+*token*
+*.netrc
+
+# Raw/large science data
+data/
+mrvmt*/
+*.fits
+*.fit
+*.fts
+*.parquet
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# Run products; store selected evidence only under evidence/
+runs/
+task_outputs/
+checkpoints/
+logs/
+
+# Large/generated diagnostics
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

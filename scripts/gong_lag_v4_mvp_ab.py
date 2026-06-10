@@ -637,6 +637,60 @@ def _is_nearly_int(value: float, tol: float = 1e-6) -> bool:
     return math.isfinite(value) and abs(value - round(value)) < tol
 
 
+
+def _try_parse_flat_12col_hmi_mpts_splitting(numeric_lines: Sequence[Tuple[int, List[float]]]) -> Dict[Tuple[int, int], Dict[int, float]]:
+    """Parse HMI mpts flat splitting format.
+
+    Expected columns per mode:
+        l n a1 ea1 a2 ea2 a3 ea3 a4 ea4 a5 ea5
+
+    For Q1, the downstream default still uses odd k = 1, 3, 5.
+    Sentinel rule:
+        coeff == 0 and err == 0 means undefined, not physical zero.
+    """
+    rows = []
+    for line_no, vals in numeric_lines:
+        if len(vals) != 12:
+            continue
+        if not (_is_nearly_int(vals[0]) and _is_nearly_int(vals[1])):
+            continue
+        ell = int(round(vals[0]))
+        n = int(round(vals[1]))
+        if ell < 0 or n < 0:
+            continue
+        rows.append((line_no, vals))
+
+    if len(rows) < 10:
+        return {}
+
+    records: Dict[Tuple[int, int], Dict[int, float]] = {}
+    # k -> (coefficient column index, error column index), zero-based.
+    colmap = {
+        1: (2, 3),
+        2: (4, 5),
+        3: (6, 7),
+        4: (8, 9),
+        5: (10, 11),
+    }
+
+    for line_no, vals in rows:
+        ell = int(round(vals[0]))
+        n = int(round(vals[1]))
+        rec: Dict[int, float] = {}
+        for k, (ci, ei) in colmap.items():
+            coeff = float(vals[ci])
+            err = float(vals[ei])
+            if not math.isfinite(coeff):
+                continue
+            # HMI mpts convention: coeff=0 and err=0 is an undefined sentinel.
+            if coeff == 0.0 and err == 0.0:
+                continue
+            rec[int(k)] = coeff
+        if rec:
+            records[(ell, n)] = rec
+
+    return records
+
 def load_splitting_file(splitting_file: str, logger: logging.Logger) -> SplittingData:
     data = SplittingData(path=splitting_file)
     if splitting_file is None or str(splitting_file).strip().lower() in {"", "none", "null"}:
@@ -658,6 +712,21 @@ def load_splitting_file(splitting_file: str, logger: logging.Logger) -> Splittin
         logger.warning(data.warnings[-1])
         return data
     numeric_lines = [(idx + 1, values) for idx, line in enumerate(lines) if (values := _parse_numeric_tokens(line)) is not None]
+
+    flat_records = _try_parse_flat_12col_hmi_mpts_splitting(numeric_lines)
+    if flat_records:
+        data.parsed = True
+        data.records = flat_records
+        data.metadata = {
+            "format": "hmi_mpts_flat_12col",
+            "n_records": len(flat_records),
+            "k_values_seen": sorted(set(k for rec in flat_records.values() for k in rec.keys())),
+            "max_abs_coefficient_assumed_uhz": max(abs(v) for rec in flat_records.values() for v in rec.values()),
+            "sentinel_rule": "coeff==0 and err==0 skipped as undefined",
+        }
+        logger.info("Parsed HMI mpts flat 12-column splitting file %s with %d mode records; k seen=%s", path, len(flat_records), data.metadata["k_values_seen"])
+        return data
+
     records: Dict[Tuple[int, int], Dict[int, float]] = {}
     i = 1 if numeric_lines and len(numeric_lines[0][1]) == 1 else 0
     while i <= len(numeric_lines) - 3:

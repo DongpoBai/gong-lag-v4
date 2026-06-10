@@ -1,0 +1,12 @@
+## HMI candidate files
+
+No recursive search was performed.
+
+Policy:
+- Do not run `find` on `/project2/erhodes_44` or Rhodes project roots.
+- HMI inputs must be identified by explicit known paths, curated manifests, or user-provided file paths.
+- Once a candidate HMI file path is known, inspect that single file only.
+
+Current status:
+- GONG MVP-A/B bin_time_series is available.
+- HMI reference/residual/bin-level time-series path is not yet identified.

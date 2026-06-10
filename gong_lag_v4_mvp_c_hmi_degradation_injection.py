@@ -341,14 +341,20 @@ def rename_by_aliases(df: pd.DataFrame, aliases: Mapping[str, Sequence[str]]) ->
 
 
 def add_time_hours(df: pd.DataFrame, column: str = "t_mid") -> pd.DataFrame:
+    """Add absolute Unix-epoch hours for a datetime column.
+
+    Use pandas Timedelta division rather than datetime.astype("int64").
+    In recent pandas/runtime combinations, the integer datetime unit may be
+    microseconds rather than nanoseconds.  Timedelta division is unit-independent
+    and keeps lag injection, 9-day kernels, 81-day detrending, and bootstrap
+    block sizes in true hours.
+    """
     out = df.copy()
     t = pd.to_datetime(out[column], utc=True, errors="coerce")
     out[column] = t
-    hours = np.full(len(out), np.nan, dtype=float)
-    good = t.notna().to_numpy()
-    if np.any(good):
-        hours[good] = t[good].astype("int64").astype(float).to_numpy() / 3.6e12
-    out[f"{column}_hours"] = hours
+    epoch = pd.Timestamp("1970-01-01T00:00:00Z")
+    hours = (t - epoch) / pd.Timedelta(hours=1)
+    out[f"{column}_hours"] = hours.to_numpy(dtype=float, copy=True)
     return out
 
 
@@ -1306,12 +1312,17 @@ def recover_lags(
         inject_lag, realization, low, high, width = key
         sub = sub.sort_values("t_mid_hours").copy()
 
-        mask = sub["mask_accepted"].astype(bool).to_numpy()
-        times = sub["t_mid_hours"].to_numpy(float)
-        nu = sub["hmi_delta_nu_degraded"].to_numpy(float)
-        gamma = sub["hmi_gamma_degraded"].to_numpy(float)
-        sigma_nu = sub["sigma_nu"].to_numpy(float) if "sigma_nu" in sub.columns else None
-        sigma_gamma = sub["sigma_lngamma"].to_numpy(float) if "sigma_lngamma" in sub.columns else None
+        mask = sub["mask_accepted"].astype(bool).to_numpy(copy=True)
+        times = sub["t_mid_hours"].to_numpy(dtype=float, copy=True)
+        nu = sub["hmi_delta_nu_degraded"].to_numpy(dtype=float, copy=True)
+        gamma = sub["hmi_gamma_degraded"].to_numpy(dtype=float, copy=True)
+        sigma_nu = sub["sigma_nu"].to_numpy(dtype=float, copy=True) if "sigma_nu" in sub.columns else None
+        sigma_gamma = sub["sigma_lngamma"].to_numpy(dtype=float, copy=True) if "sigma_lngamma" in sub.columns else None
+
+        hmi_overlap_mask = (
+            np.isfinite(sub["hmi_delta_nu_degraded_noiseless"].to_numpy(dtype=float, copy=True))
+            & np.isfinite(sub["hmi_gamma_degraded_noiseless"].to_numpy(dtype=float, copy=True))
+        )
 
         nu[~mask] = np.nan
         gamma[~mask] = np.nan
@@ -1361,6 +1372,13 @@ def recover_lags(
         tau_hat = float(est["tau_hat_hours"])
         bias = tau_hat - float(inject_lag) if math.isfinite(tau_hat) else np.nan
         finite_fraction = float(np.nanmean(mask)) if len(mask) else 0.0
+        n_hmi_overlap_points = int(np.sum(hmi_overlap_mask)) if len(mask) else 0
+        hmi_overlap_fraction_of_target = float(np.mean(hmi_overlap_mask)) if len(mask) else 0.0
+        if n_hmi_overlap_points > 0:
+            finite_fraction_hmi_overlap = float(np.sum(mask & hmi_overlap_mask) / n_hmi_overlap_points)
+        else:
+            finite_fraction_hmi_overlap = 0.0
+
         ci68_contains = bool(ci16 <= float(inject_lag) <= ci84) if all(math.isfinite(x) for x in [ci16, ci84]) else False
         ci95_contains = bool(ci025 <= float(inject_lag) <= ci975) if all(math.isfinite(x) for x in [ci025, ci975]) else False
 
@@ -1385,6 +1403,9 @@ def recover_lags(
             "n_pairs_at_max": int(est["n_pairs_at_max"]),
             "n_target_points": int(len(sub)),
             "finite_fraction": finite_fraction,
+            "n_hmi_overlap_points": n_hmi_overlap_points,
+            "hmi_overlap_fraction_of_target": hmi_overlap_fraction_of_target,
+            "finite_fraction_hmi_overlap": finite_fraction_hmi_overlap,
             "bootstrap_n_requested": int(args.bootstrap_n),
             "bootstrap_n_finite": int(len(boot_finite)),
             "bootstrap_mean_hours": boot_mean,
@@ -1451,6 +1472,8 @@ def summarize_recovery(by_bin: pd.DataFrame, args: argparse.Namespace) -> pd.Dat
                 "coverage68_rate": float(np.nanmean(sub["ci68_contains_injected"].astype(float))),
                 "coverage95_rate": float(np.nanmean(sub["ci95_contains_injected"].astype(float))),
                 "finite_fraction_median": float(np.nanmedian(sub["finite_fraction"])),
+                "hmi_overlap_fraction_median": float(np.nanmedian(sub["hmi_overlap_fraction_of_target"])) if "hmi_overlap_fraction_of_target" in sub.columns else np.nan,
+                "finite_fraction_hmi_overlap_median": float(np.nanmedian(sub["finite_fraction_hmi_overlap"])) if "finite_fraction_hmi_overlap" in sub.columns else float(np.nanmedian(sub["finite_fraction"])),
             })
         return pd.DataFrame(rows)
 
@@ -1560,19 +1583,27 @@ def evaluate_acceptance(summary: pd.DataFrame, by_bin: pd.DataFrame, args: argpa
             "Checks 2000-4500 microHz main range without collapsing per-bin output.",
         )
 
-    finite_fraction = float(np.nanmedian(by_bin["finite_fraction"])) if len(by_bin) else 0.0
-    if finite_fraction >= 0.80:
+    finite_fraction_full_grid = float(np.nanmedian(by_bin["finite_fraction"])) if len(by_bin) else 0.0
+    if len(by_bin) and "finite_fraction_hmi_overlap" in by_bin.columns:
+        finite_fraction_for_acceptance = float(np.nanmedian(by_bin["finite_fraction_hmi_overlap"]))
+    else:
+        finite_fraction_for_acceptance = finite_fraction_full_grid
+
+    if finite_fraction_for_acceptance >= 0.80:
         status = "PASS"
-    elif finite_fraction >= 0.50:
+    elif finite_fraction_for_acceptance >= 0.50:
         status = "WARN"
     else:
         status = "FAIL"
     add(
         "finite_fraction_sufficient",
         status,
-        finite_fraction,
-        "PASS >=0.80; WARN >=0.50; FAIL <0.50",
-        "Measures finite GONG-like target samples after degradation, masking, and noise.",
+        {
+            "hmi_overlap_grid": finite_fraction_for_acceptance,
+            "full_gong_grid_report_only": finite_fraction_full_grid,
+        },
+        "PASS if HMI-overlap finite fraction >=0.80; WARN >=0.50; FAIL <0.50. Full-grid fraction is report-only.",
+        "Measures finite samples over the HMI-overlap target grid; full 1995-2025 GONG grid coverage is reported but not used as a hard failure because Candidate 1 starts in 2010.",
     )
 
     tau_finite_fraction = float(np.isfinite(by_bin["tau_hat_hours"]).mean()) if len(by_bin) else 0.0

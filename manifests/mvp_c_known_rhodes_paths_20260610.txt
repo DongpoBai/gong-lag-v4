@@ -1,0 +1,25 @@
+## Known Rhodes/WMLTP paths to check without recursive scans
+
+WMLTP=/project2/erhodes_44/rcf-04/astro10/wmltp/theor1.0
+DFLS=/project2/erhodes_44/rcf-04/jreiter/wmltp/mdi61d/DFLS
+DOC=/project2/erhodes_44/rcf-04/astro10/Nasa2006/wmltpdetails.tex
+REV6_CORE=/project2/erhodes_44/rcf-04/jreiter/wmltp/meth2.rev6.f
+REV7_CORE=/project2/erhodes_44/rcf-04/jreiter/wmltp/rev7/prg/lzrfitwmltp.f
+## exact-path check only
+Wed Jun 10 05:49:12 UTC 2026
+
+### /project2/erhodes_44/rcf-04/astro10/wmltp/theor1.0
+drwxrws--- 2 erhodes erhodes_44 4096 Mar 19 22:23 /project2/erhodes_44/rcf-04/astro10/wmltp/theor1.0
+
+### /project2/erhodes_44/rcf-04/jreiter/wmltp/mdi61d/DFLS
+drwxrwsrwx 2 jreiter erhodes_44 4096 Mar  2  2024 /project2/erhodes_44/rcf-04/jreiter/wmltp/mdi61d/DFLS
+
+### /project2/erhodes_44/rcf-04/astro10/Nasa2006/wmltpdetails.tex
+-rw-rw-r-- 1 erhodes erhodes_44 32982 Jun 28  2006 /project2/erhodes_44/rcf-04/astro10/Nasa2006/wmltpdetails.tex
+
+### /project2/erhodes_44/rcf-04/jreiter/wmltp/meth2.rev6.f
+-rw-rw-r-- 1 jreiter erhodes_44 661602 Sep 19  2012 /project2/erhodes_44/rcf-04/jreiter/wmltp/meth2.rev6.f
+
+### /project2/erhodes_44/rcf-04/jreiter/wmltp/rev7/prg/lzrfitwmltp.f
+-rw-rw---- 1 jreiter erhodes_44 354086 May 24  2019 /project2/erhodes_44/rcf-04/jreiter/wmltp/rev7/prg/lzrfitwmltp.f
+
